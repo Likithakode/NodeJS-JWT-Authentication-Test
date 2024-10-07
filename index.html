@@ -22,6 +22,7 @@
 
             <div>
                 <button onclick="login()">Login</button>
+                <button onclick="getDashbaord()">Get Dashbaord</button>
             </div>
         </main>
 
@@ -34,9 +35,91 @@
                 axios.post('/api/login', data).then(
                     res=>{
                         console.log(res.data);
+                        document.getElementById('username').value = '';
+                        document.getElementById('password').value = '';
+                        if(res && res.data && res.data.success){
+                            const token = res.data.token;
+                            localStorage.setItem('jwt', token);
+                            getDashbaord();
+                            createSettingsButton(); 
+                        }
                     }
                 )
             }
+
+            function handleUnauthorized() {
+                localStorage.removeItem('jwt');
+                window.location.href = '/';
+            }
+
+            function getDashbaord(){
+                const token = localStorage.getItem('jwt');
+                axios.get('/api/dasboard',{
+                    headers:{
+                        'Authorization': `Bearer ${token}`                    
+                    }
+                }).then(res=>{
+                    if(res && res.data && res.data.success){
+                        document.querySelector('h1.row').innerHTML = 'Dashbaord';
+                        document.querySelector('main').innerHTML = res.data.myContent;
+                        createSettingsButton();
+                        history.pushState({ page: 'dashboard' }, 'Dashboard', '/dashboard');                    
+                    }
+                }).catch(err => {
+                    if (err.response && err.response.status === 401) {
+                        handleUnauthorized();
+                    }
+                });
+            }
+            function getSettings(){
+                const token = localStorage.getItem('jwt');
+                axios.get('/api/settings',{
+                    headers:{
+                        'Authorization': `Bearer ${token}`                    
+                    }
+                }).then(res=>{
+                    if(res && res.data && res.data.success){
+                        document.querySelector('h1.row').innerHTML = 'Settings';
+                        document.querySelector('main').innerHTML = res.data.myContent;
+                        history.pushState({ page: 'settings' }, 'Settings', '/settings');
+                    }
+                }).catch(err => {
+                    if (err.response && err.response.status === 401) {
+                        handleUnauthorized();
+                    }
+                });
+            }
+
+            function createSettingsButton() {
+                const button = document.createElement('button');
+                button.textContent = 'Settings';
+                button.onclick = getSettings;
+                document.querySelector('main').appendChild(button);
+            }
+
+            function onLoad(){
+                const token = localStorage.getItem('jwt');
+                if(token){
+                    getDashbaord();
+                    createSettingsButton(); 
+                }
+            }
+
+            window.onpopstate = function(event) {
+                if (event.state) {
+                    if (event.state.page === 'dashboard') {
+                        getDashboard();
+                    } else if (event.state.page === 'settings') {
+                        getSettings();
+                    }
+                } else {
+                   
+                    document.querySelector('h1.row').innerHTML = 'Login';
+                    document.querySelector('main').innerHTML = ''; 
+                }
+            };
+
+            onLoad();
         </script>
     </div>
 </body>
