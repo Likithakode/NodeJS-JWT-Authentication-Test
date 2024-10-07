@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path')
 const bodyParser = require('body-parser')
 const jwt = require('jsonwebtoken')
-const exjwt = require('express-jwt');
+const {expressjwt: exjwt } = require('express-jwt');
 const app = express()
 
 const PORT = 4000;
@@ -14,12 +14,13 @@ const jwtMW = exjwt({
     algorithms: ['HS256']
 });
 
-app.use(bodyParser.json());
-app.user(bodyParser.urlencoder({extended: true}));
 app.use((req,res,next)=>{
     res.header('Access-Control-Allow-Origin','http://localhost:4000');
     res.header('Access-Control-Allow-Headers','Origin,X-Requested-With,Content-Type,Accept,Authorization');
+    next();
 })
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
 
 let users = [
     {
@@ -43,7 +44,8 @@ app.use(function(err,req,res,next){
     if(err.name == 'UnauthorizedError'){
         res.status(401).json({
             success: false,
-            err
+            officialError: err,
+            err: 'Username or password is incorrect 2'
         })
     }
     else{
@@ -58,7 +60,7 @@ app.post('/api/login',(req,res)=>{
         if(user.name === username && user.password === password){
             let token = jwt.sign({
                 id:user.id,username: user.username
-            }, secretKey, {expiresIn: '7d'});
+            }, secretKey, {expiresIn: '3m'});
             res.json({
                 success: true,
                 err: null,
@@ -74,5 +76,20 @@ app.post('/api/login',(req,res)=>{
             })
         }
     }
+})
+
+
+app.get('/api/dasboard',jwtMW, (req,res)=>{
+    res.json({
+        success: true,
+        myContent: 'Secret content that only logged persons can see!!!'
+    })
+})
+
+app.get('/api/settings',jwtMW, (req,res)=>{
+    res.json({
+        success: true,
+        myContent: 'Hello Welcome to settings...Secret content that only logged persons can see these!!!'
+    })
 })
 app.listen(PORT);
